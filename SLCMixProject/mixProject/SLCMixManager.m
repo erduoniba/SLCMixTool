@@ -28,6 +28,8 @@
         self.fileName = @"mixProject";
         self.fullPath = [self defaultFullPath];
         self.fileHeader = @"SLC";
+        self.authorName = self.fileName;
+        self.companyName = self.authorName;
         self.classArray = [NSMutableArray array];
     }
     return self;
@@ -38,10 +40,15 @@
 - (void)setFileName:(NSString *)fileName {
     _fileName = fileName;
     self.fullPath = [self defaultFullPath];
+    if (!_authorName) {
+        _authorName = fileName;
+    }
+    if (!_companyName) {
+        _companyName = fileName;
+    }
 }
 
 - (void)fireOnBorn {
-    
     BOOL isCreateDirectory = [self createDirectory];
     dispatch_semaphore_t semaphore = GCD_Semaphore(1);
     if (isCreateDirectory) {
@@ -65,8 +72,8 @@
     BOOL isFileExists = [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@.h",filePath]];
     if (isFileExists) return; //文件已存在,立即停止
     
-    NSString *methodString = @"/**调用所有方法 - (模拟调用,fire完所有局部对象会立即被释放)*/\n- (void)fire;";
-    NSString *hString = [NSString stringWithFormat:@"\n\n\n\n\n#import <Foundation/Foundation.h>\n\n\n\n@interface %@ : NSObject\n\n\n%@\n@end",fileName,methodString]; //.h文件内容
+    NSString *methodString = @"/**调用所有方法 - (模拟调用,fire完所有局部对象会立即被释放)*/\n+ (void)fire;";
+    NSString *hString = [NSString stringWithFormat:@"\n\n\n\n\n#import <Foundation/Foundation.h>\n\n\n\n@interface %@ : NSObject\n\n%@\n\n@end",fileName,methodString]; //.h文件内容
     NSString *mString = [self createBulletsM:fileName methodString:methodString]; //.m文件内容
     
     
@@ -93,19 +100,22 @@
     
     NSString *methodClass = [NSString stringWithFormat:@"- (NSArray <NSString *>*)classArray {\n    if (!_classArray) {\n     _classArray = %@;\n    }\n    return _classArray;\n}",classString];
     
-      bulletsM = [bulletsM stringByAppendingString:[NSString stringWithFormat:@"%@",methodClass]];
+    bulletsM = [bulletsM stringByAppendingString:[NSString stringWithFormat:@"%@",methodClass]];
+    
+    NSString *classMethodFire = [NSString stringWithFormat:@"\n+ (void)fire\n{\n\t[[[self alloc] init] fire];\n}\n"]; //fire方法
+    bulletsM = [bulletsM stringByAppendingString:[NSString stringWithFormat:@"%@",classMethodFire]];
     
     NSString *methodFire = [NSString stringWithFormat:@"\n- (void)fire\n{\n\t@autoreleasepool {\n\t\tNSLog(@\"===生成了%@对象\");\n\t\tfor (NSString *className in self.classArray) {\n\t\t\tClass aClass = NSClassFromString(className);\n\t\t\tid object = [aClass new];\n\t\t\t[self getAllMethods:object];\n\t\t}\n\t}\n}\n",fileName]; //fire方法
     
-     bulletsM = [bulletsM stringByAppendingString:[NSString stringWithFormat:@"%@",methodFire]];
+    bulletsM = [bulletsM stringByAppendingString:[NSString stringWithFormat:@"%@",methodFire]];
     
-     NSString *fileContent = [[NSString alloc] initWithContentsOfFile:@"Bullets" encoding:NSUTF8StringEncoding error:nil];
-     if (!fileContent) {
-         NSAssert(NO, @"Please Config Product->Scheme->Edit Scheme, in \"Run\" Section, select \"Working Dictionary\" to use \"Using cusom working dictionary\"");
-     }
-     bulletsM = [bulletsM stringByAppendingString:fileContent];
+    NSString *fileContent = [[NSString alloc] initWithContentsOfFile:@"Bullets" encoding:NSUTF8StringEncoding error:nil];
+    if (!fileContent) {
+        NSAssert(NO, @"Please Config Product->Scheme->Edit Scheme, in \"Run\" Section, select \"Working Dictionary\" to use \"Using cusom working dictionary\"");
+    }
+    bulletsM = [bulletsM stringByAppendingString:fileContent];
     
-     bulletsM = [bulletsM stringByAppendingString:@"\n@end"];
+    bulletsM = [bulletsM stringByAppendingString:@"\n@end"];
     
     return bulletsM;
 }
@@ -113,16 +123,22 @@
 - (void)createFile {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     
-    NSString *file = [NSString stringWithFormat:@"%@%@%@",self.fileHeader,self.bodyString,self.tailString];
+    NSString *file = [NSString stringWithFormat:@"%@%@%@",self.fileHeader,self.bodyString.capitalizedString,self.tailString];
     NSString *filePath = [self.fullPath stringByAppendingPathComponent:file];
     [self.classArray addObject:file];
     
     BOOL isFileExists = [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@.h",filePath]];
     if (isFileExists) return; //文件已存在,立即停止
     
-   __block NSString *hString = [NSString stringWithFormat:@"\n\n\n\n\n#import <Foundation/Foundation.h>\n\n\n\n@interface %@ : NSObject\n%@\n",file,[self randomProperty]]; //.h文件内容
+    NSString *today = [self today];
+    NSString *year = [self year];
+    NSString *fileHeader = [NSString stringWithFormat:@"//\n//  %@.h\n//  %@\n//  Created by %@ on %@.\n//  Copyright © %@年 %@. All rights reserved.\n//", file, self.fileName, self.authorName, today, year, self.companyName];
+    NSString *fileHeaderM = [NSString stringWithFormat:@"//\n//  %@.m\n//  %@\n//  Created by %@ on %@.\n//  Copyright © %@年 %@. All rights reserved.\n//", file, self.fileName, self.authorName, today, year, self.companyName];
     
-    __block NSString *mString = [NSString stringWithFormat:@"\n\n\n\n\n#import \"%@.h\"\n\n\n\n@implementation %@",file,file]; //.m文件内容
+    
+    __block NSString *hString = [NSString stringWithFormat:@"%@\n\n#import <Foundation/Foundation.h>\n\n\n@interface %@ : NSObject\n%@\n",fileHeader, file, [self randomProperty]]; //.h文件内容
+    
+    __block NSString *mString = [NSString stringWithFormat:@"%@\n#import \"%@.h\"\n\n@implementation %@",fileHeaderM, file, file]; //.m文件内容
     
     void(^handle)(NSArray <NSString *>*methodArray) = ^(NSArray <NSString *>*methodArray){
         
@@ -132,7 +148,6 @@
         
         for (NSString *method in methodArray) {
             if ([mString containsString:method]) continue; //如果有,跳过
-            
             mString = [mString stringByAppendingString:[NSString stringWithFormat:@"\n\n%@",[self removeLastOneChar:method]]];
             mString = [mString stringByAppendingString:[NSString stringWithFormat:@"\n{\n\tfor (NSInteger i = 0; i < 3; i++) {\n\t\tNSString *str = @\"func name = %@\";\n\t\t[str stringByAppendingString:@\"time is 3\"];\n\t}\n\tNSLog(@\"Method = %@\\n\");\n}\n",method, method]];
         }
@@ -141,7 +156,7 @@
     [self randomMethod:handle];
     
     
-    hString = [hString stringByAppendingString:@"\n@end"];
+    hString = [hString stringByAppendingString:@"\n\n@end"];
     BOOL isCreateH = [fileManager createFileAtPath:[NSString stringWithFormat:@"%@.h",filePath] contents:[hString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
     if (isCreateH) {
         NSLog(@"%@___文件创建成功!",file);
@@ -168,13 +183,13 @@
 - (NSString *)randomPerProperty {
     NSString *propertyName = [NSString stringWithFormat:@"%@%@",bodyArray()[self.randomBodyNum],[self randomChar]];
     NSArray <NSString *>*propertyArray = @[
-                                           @"\n",
-                                           [NSString stringWithFormat:@"@property (nonatomic, assign) BOOL %@;",propertyName],
-                                           [NSString stringWithFormat:@"@property (nonatomic, assign) NSInteger %@;",propertyName],
-                                           [NSString stringWithFormat:@"@property (nonatomic, copy) NSString *%@;",propertyName],
-                                           [NSString stringWithFormat:@"@property (nonatomic, strong) NSArray *%@;",propertyName],
-                                           [NSString stringWithFormat:@"@property (nonatomic, strong) NSDictionary *%@;",propertyName],
-                                           ];
+        @"\n",
+        [NSString stringWithFormat:@"@property (nonatomic, assign) BOOL %@;",propertyName],
+        [NSString stringWithFormat:@"@property (nonatomic, assign) NSInteger %@;",propertyName],
+        [NSString stringWithFormat:@"@property (nonatomic, copy) NSString *%@;",propertyName],
+        [NSString stringWithFormat:@"@property (nonatomic, strong) NSArray *%@;",propertyName],
+        [NSString stringWithFormat:@"@property (nonatomic, strong) NSDictionary *%@;",propertyName],
+    ];
     NSUInteger randomNum = arc4random() % 5;
     return propertyArray[randomNum];
 }
@@ -209,7 +224,7 @@
                 if (i == 0) {
                     methodName = [NSString stringWithFormat:@"%@%@:(%@)%@",methodName,newMethod.capitalizedString,typesArray()[randomM],newMethod];
                 }else {
-                  methodName = [NSString stringWithFormat:@"%@ and%@:(%@)%@",methodName,newMethod.capitalizedString,typesArray()[randomM],newMethod];
+                    methodName = [NSString stringWithFormat:@"%@ and%@:(%@)%@",methodName,newMethod.capitalizedString,typesArray()[randomM],newMethod];
                 }
             }else { //包含,跳过
                 break;
@@ -256,7 +271,7 @@
 //随机一个字母
 - (NSString *)randomChar {
     NSArray *array = @[@"a",@"b",@"c",@"d",@"e",@"f",@"g",@"h",@"i",@"g",@"k",@"l",@"m",@"n",@"o",@"p",@"q",@"r",@"s",@"t",@"u",@"v",@"w",@"x",@"y",@"z"];
-   NSUInteger randomNum = arc4random() % 25;
+    NSUInteger randomNum = arc4random() % 25;
     return array[randomNum];
 }
 
@@ -279,7 +294,7 @@
             if (self.contaisArray && self.contaisArray.count != 0) { //指定
                 for (NSString *string in self.contaisArray) {
                     if ([dir containsString:string]) {
-                         [self handlePathWithDirectory:dir];
+                        [self handlePathWithDirectory:dir];
                     }
                 }
             }else { //不指定
@@ -329,7 +344,7 @@
         
         if (handle) handle(directory);
     }
-
+    
 }
 
 - (void)handlePathWithDirectory:(NSString *)directory {
@@ -338,9 +353,9 @@
     NSString *fileMName = [directory lastPathComponent];
     NSString *fileHName = [[self removeLastOneChar:fileMName] stringByAppendingString:@"h"];
     
-   __block NSString *hPath = @"\n";
+    __block NSString *hPath = @"\n";
     NSString *mPath = [NSString stringWithFormat:@"%@/%@",self.childFullPath,directory];
-   
+    
     NSString *fullPath = [self fileExist] ?:nil;
     [self forwardAllFiles:fullPath handle:^(NSString *dir) {
         if ([dir containsString:fileHName]) {
@@ -351,7 +366,7 @@
     void(^handle)(NSArray <NSString *>*methodArray) = ^(NSArray <NSString *>*methodArray){
         [self HfileHandleWithPath:hPath methodArray:methodArray];
     };
-        [self MfileHandleWithPath:mPath handle:handle];
+    [self MfileHandleWithPath:mPath handle:handle];
     
     NSLog(@"%@写入成功\n%@写入成功",fileMName,fileHName);
     
@@ -365,7 +380,7 @@
     NSData *readData = [readHandle readDataToEndOfFile]; //读取所有内容
     NSString *readString = [[NSString alloc] initWithData:readData encoding:NSUTF8StringEncoding]; //文件原内容
     
-     NSInteger end = [writeHandle seekToEndOfFile];
+    NSInteger end = [writeHandle seekToEndOfFile];
     
     NSInteger num = self.childTailPosition != 0 ? self.childTailPosition : 5;
     [writeHandle seekToFileOffset:end - num];
@@ -396,7 +411,7 @@
     NSInteger end = [writeHandle seekToEndOfFile];
     NSInteger num = self.childTailPosition != 0 ? self.childTailPosition : 5;
     [writeHandle seekToFileOffset:end - num];
-
+    
     NSUInteger randomNum = self.childMethodNum != 0 ? self.childMethodNum : 1 + arc4random() % 6;
     NSString * mString = @"\n";
     NSMutableArray *methodArray = [NSMutableArray array];
@@ -409,7 +424,7 @@
         mString = [mString stringByAppendingString:[NSString stringWithFormat:@"\n\n%@",[self removeLastOneChar:methodString]]];
         mString = [mString stringByAppendingString:[NSString stringWithFormat:@"\n{\n      for (NSInteger i = 0; i < 3; i++) {\n        NSString *str = @\"func name = %@\";\n        [str stringByAppendingString:@\"time is 3\"];\n       }\n}\n",methodString]];
     }
-
+    
     mString = [mString stringByAppendingString:@"\n\n@end"];
     NSData *data = [mString dataUsingEncoding:NSUTF8StringEncoding];
     [writeHandle writeData:data]; //写入数据
@@ -427,5 +442,16 @@
     return backPath;
 }
 
+- (NSString *)today {
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateFormat = @"yyyy/MM/dd";
+    return [dateFormatter stringFromDate:[NSDate new]];
+}
+
+- (NSString *)year {
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    dateFormatter.dateFormat = @"yyyy";
+    return [dateFormatter stringFromDate:[NSDate new]];
+}
 
 @end

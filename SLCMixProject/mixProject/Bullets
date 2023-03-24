@@ -1,21 +1,10 @@
-- (void)fire
-{
-	@autoreleasepool {
-		NSLog(@"===生成了SCBBullets对象");
-		for (NSString *className in self.classArray) {
-			Class aClass = NSClassFromString(className);
-			id object = [aClass new];
-			[self getAllMethods:object];
-		}
-	}
-}
 - (void)getAllMethods:(id)obj
 {
 	unsigned int methodCount =0;
 	Method* methodList = class_copyMethodList([obj class],&methodCount);
 	for(int i = 0; i < methodCount; i++) {
 		Method method = methodList[i];
-		const char* method_name =sel_getName(method_getName(method));
+		const char* method_name = sel_getName(method_getName(method));
 		int arguments = method_getNumberOfArguments(method);
 		char dst;
         char *arg = malloc(arguments);

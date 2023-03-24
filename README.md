@@ -5,7 +5,13 @@ iOS 代码混淆:
 2.在已有文件内增加垃圾函数
 
 ## 生成垃圾文件和内部属性及函数.
-1.  设置变量
+1. 工程配置，用于读取 `Bullets` 文件的数据
+
+   ![](./Assets/001.jpg)
+
+   ![](./Assets/002.jpg) 
+
+2. 设置变量
 
 在执行文件`main.m`内修改变量.
 ```
@@ -16,12 +22,12 @@ mix.fileNum = 150; //文件个数
 [mix fireOnBorn];
 ```
 
-2. 执行
- command + r 运行,文件夹(不设置的情况下，默认在桌面)生成.
+3. 执行
+    command + r 运行,文件夹(不设置的情况下，默认在桌面)生成.
 
-3. 调用
-代码拉进项目(或设置路径直接在工程生成)后,有一个默认调用类.
-`#import "设置的fileHeader + Bullets.h"`,例如`#import "SQZBullets.h"`.
+4. 调用
+    代码拉进项目(或设置路径直接在工程生成)后,有一个默认调用类.
+    `#import "设置的fileHeader + Bullets.h"`,例如`#import "SQZBullets.h"`.
 
 所有的类会生成一个对象,并且简单操作其内的属性和方法,执行完成后会立即被释放.
 ```
@@ -38,5 +44,4 @@ mix.contaisArray = @[@"SLCmixLayout"];
 mix.childMethodNum = 10;
 [mix fireOnChild];
 ```
-
 

@@ -43,7 +43,10 @@ dispatch_semaphore_signal(lock);
 @property (nonatomic, copy) NSString * fullPath;
 /**多少组文件 - 默认120*/
 @property (nonatomic, assign) NSInteger fileNum;
-
+/**作者名称 - 默认fileName*/
+@property (nonatomic, copy) NSString * authorName;
+/**公司名称 - 默认authorName*/
+@property (nonatomic, copy) NSString * companyName;
 
 
 #pragma mark ---<只对fireOnChild有效>---

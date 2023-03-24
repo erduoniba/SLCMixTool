@@ -9,16 +9,20 @@
 #import <Foundation/Foundation.h>
 #import "SLCMixManager.h"
 
+//#import "HDBullets.h"
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         
-        
         SLCMixManager *mix = [SLCMixManager new];
-//        mix.fileHeader = @"SQZ"; //header
-//        mix.fileName = @"QuizProject"; //文件夹名称
-//        mix.fileNum = 150; //文件个数
+        mix.fileHeader = @"HD"; //header
+        mix.fileName = @"HDCodeMix"; //文件夹名称
+        mix.fileNum = 5; //文件个数
+        mix.authorName = @"denglibing5";
+        mix.companyName = @"Midea";
         [mix fireOnBorn];
+        
+//        [HDBullets fire];
         
         
 //        SLCMixManager *mix = [SLCMixManager new];
